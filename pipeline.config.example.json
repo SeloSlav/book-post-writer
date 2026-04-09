@@ -1,0 +1,31 @@
+{
+  "models": {
+    "embedding": "text-embedding-3-small",
+    "chat": "gpt-5.4",
+    "reasoningEffort": "medium"
+  },
+  "chunk": {
+    "targetChars": 1200,
+    "overlapChars": 200,
+    "minChars": 400
+  },
+  "paths": {
+    "books": "data/books",
+    "voice": "data/voice",
+    "output": "data/output",
+    "indexDir": "data/index"
+  },
+  "spoilerDefaults": {
+    "book": "medium",
+    "voice": "low"
+  },
+  "draft": {
+    "bookEvidenceK": 28,
+    "voiceEvidenceK": 16,
+    "maxRevisionRounds": 2,
+    "minWordCount": 1100,
+    "maxOutputTokens": 12000,
+    "maxOutputTokensOutline": 3200,
+    "maxOutputTokensCompact": 900
+  }
+}
