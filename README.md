@@ -8,6 +8,7 @@
   - [Where to get API keys (pick one path to start)](#where-to-get-api-keys)
   - [Cloud vs “open” / local setups](#cloud-vs-open-local)
 - [Quick start (about five minutes)](#quick-start)
+  - [Install Node.js and open a terminal (Windows & Mac)](#install-nodejs-and-terminal)
 - [What you get (plain English)](#what-you-get)
 - [Prerequisites](#prerequisites)
 - [Setup details](#setup-details)
@@ -69,19 +70,61 @@ You can ignore the jargon: follow the numbered steps in **Quick start** (right b
 
 ## <span id="quick-start">Quick start (about five minutes)</span>
 
-1. **Install**: [Node.js 20+](https://nodejs.org/) if you do not already have it.
-2. **Dependencies**: In the project folder, run:
+### <span id="install-nodejs-and-terminal">Install Node.js and open a terminal (Windows & Mac)</span>
+
+Do this section once. If you already installed Node.js in the past, skip to **Check that it worked**, then jump to step 1 under **Then run these commands**.
+
+**What is Node.js?** A free program that lets your computer run Book Post Writer. You are not “coding”; you are just installing the same engine many modern apps use.
+
+#### Download and install Node.js
+
+1. Open **[nodejs.org](https://nodejs.org/)** in your browser.
+2. Download the **LTS** (“Long Term Support”) installer, not the bleeding-edge one.
+3. **Windows:** Run the `.msi` file. Click **Next** through the screens and accept the defaults (including **Add to PATH** if you see it). When it finishes, **close any PowerShell or Command Prompt windows you had open** and open a fresh one so they see Node.
+4. **Mac:** Run the `.pkg` file and click through the installer. Alternatively, if someone already set you up with **Homebrew**, you can use `brew install node` in Terminal (optional; the website installer is enough).
+
+#### Which window do I type commands in?
+
+- **Windows:** Use **PowerShell** (recommended) or **Command Prompt**. Easiest way: press the **Windows key**, type **`PowerShell`**, press **Enter**. (For Command Prompt, search **`cmd`** instead.) Either works for every command in this README.
+- **Mac:** Open **Terminal**: press **Cmd + Space**, type **`Terminal`**, press **Enter**.
+- **Linux:** Open your usual **Terminal** application.
+
+That black or blue window is normal. You type one line, press **Enter**, wait for it to finish, then type the next.
+
+#### Check that it worked
+
+In that same window, type **`node -v`** and press **Enter**. You should see something like `v22.3.0`. You want **v20 or higher**.
+
+Then type **`npm -v`** and press **Enter**. You should see another version number.
+
+If either command says **not recognized**, **command not found**, or similar, Node is not on your PATH yet: restart the computer once, or reinstall Node and make sure you used the default options. On Windows, open a **new** PowerShell window after installing.
+
+#### Get “into” the Book Post Writer folder
+
+Commands like `npm install` only work when the terminal is **inside** the folder you unzipped (the one that contains **`package.json`**).
+
+- **Windows (File Explorer + PowerShell):** In File Explorer, open the Book Post Writer folder. Click the **address bar** at the top, press **Ctrl + C** to copy the path. In PowerShell, type **`cd `** (cd, then a space), **right-click** to paste the path, press **Enter**.
+- **Mac (Finder + Terminal):** In Terminal, type **`cd `** (cd, then a space). **Drag the Book Post Writer folder** from Finder into the Terminal window (it drops the full path). Press **Enter**.
+
+If you are in the right place, typing **`dir`** (Windows) or **`ls`** (Mac / Linux) should list files including **`package.json`**.
+
+---
+
+#### Then run these commands
+
+1. **Install dependencies** (still in that same folder): run:
    ```bash
    npm install
    ```
-3. **API key**: Copy the example env file and add your OpenAI key (re-read **“API key” in human words** above if the phrase “API key” makes you nervous). Create a key at [OpenAI API keys](https://platform.openai.com/api-keys) if you do not have one.
+   Wait until it finishes. You should see no red “ERR!” lines at the end.
+2. **API key**: Copy the example env file and add your OpenAI key (re-read **“API key” in human words** above if the phrase “API key” makes you nervous). Create a key at [OpenAI API keys](https://platform.openai.com/api-keys) if you do not have one.
    - **Windows (Command Prompt):** `copy .env.example .env`
    - **Windows (PowerShell):** `Copy-Item .env.example .env`
    - **macOS / Linux:** `cp .env.example .env`  
-   Then open `.env` and set `OPENAI_API_KEY` to your key.
-4. **Manuscripts**: Put your book `.docx` files in `data/books/`, *or* point the app elsewhere (see [Where your books live](#where-your-books-live) below).
-5. **Run the app**: `npm run dev`, then open the URL the terminal prints (often [http://localhost:5173](http://localhost:5173)).
-6. **First draft**: In the **Load your books, then generate a post** section: **Scan my Word books (.docx)** → **Connect sources to the writer** → describe the post in the topic box → **Write draft post** (or **Do all steps automatically (slow)**). Your draft appears in **Your post draft** on the left and is saved under `data/output/` as `post-*.txt`.
+   Then open `.env` in Notepad, TextEdit, or your editor and set `OPENAI_API_KEY` to your key (no quotes).
+3. **Manuscripts**: Put your book `.docx` files in `data/books/`, *or* point the app elsewhere (see [Where your books live](#where-your-books-live) below).
+4. **Run the app**: `npm run dev`, then open the URL the terminal prints (often [http://localhost:5173](http://localhost:5173)).
+5. **First draft**: In the **Load your books, then generate a post** section: **Scan my Word books (.docx)** → **Connect sources to the writer** → describe the post in the topic box → **Write draft post** (or **Do all steps automatically (slow)**). Your draft appears in **Your post draft** on the left and is saved under `data/output/` as `post-*.txt`.
 
 That is the whole happy path. The sections below explain what the app does in plain language, then options, the command line, and what to do when something goes wrong.
 
@@ -100,7 +143,7 @@ That is the whole happy path. The sections below explain what the app does in pl
 
 | You need | Why |
 | -------- | --- |
-| **Node.js 20+** | Runs the app, pipeline, and local API. |
+| **Node.js 20+** | Runs the app, pipeline, and local API. Step-by-step install: [Install Node.js and open a terminal](#install-nodejs-and-terminal). |
 | **OpenAI API key** (for default setup) | Chat and embeddings (billing is on your OpenAI account). [Get a key](https://platform.openai.com/api-keys). |
 
 ---
@@ -212,6 +255,8 @@ Open the Vite URL (often [http://localhost:5173](http://localhost:5173)). **Your
 
 | Symptom | Things to check |
 | ------- | ---------------- |
+| **`node` or `npm` is not recognized** | Node is missing or the terminal was opened before you installed it. Follow [Install Node.js and open a terminal](#install-nodejs-and-terminal), then open a **new** PowerShell / Terminal window. |
+| **`npm install` fails or says no `package.json`** | You are not inside the Book Post Writer folder. `cd` there first (see [Get “into” the Book Post Writer folder](#install-nodejs-and-terminal)). |
 | Errors about API key | `OPENAI_API_KEY` is set in `.env` at the repo root; restart `npm run dev` after changes. Confirm the key at [OpenAI API keys](https://platform.openai.com/api-keys). |
 | Empty or useless drafts | At least one `.docx` in your books folder; scan sources then **Connect sources to the writer** before **Write draft post**. |
 | CLI exits non-zero | Usually missing key, missing book files, or missing embeddings before `draft` / `full`. Messages are short on purpose. Read the last line. |
