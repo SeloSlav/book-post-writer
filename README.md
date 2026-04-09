@@ -4,11 +4,11 @@
 
 - [For writers who’d rather be writing than fighting software 📚](#for-writers)
 - [You don’t have to be “good with computers” ✨](#good-with-computers)
+- [Quick start (about five minutes)](#quick-start)
+  - [Install Node.js and open a terminal (Windows & Mac)](#install-nodejs-and-terminal)
 - [“API key” in human words 🔑](#api-key-in-human-words)
   - [Where to get API keys (pick one path to start)](#where-to-get-api-keys)
   - [Cloud vs “open” / local setups](#cloud-vs-open-local)
-- [Quick start (about five minutes)](#quick-start)
-  - [Install Node.js and open a terminal (Windows & Mac)](#install-nodejs-and-terminal)
 - [What you get (plain English)](#what-you-get)
 - [Prerequisites](#prerequisites)
 - [Setup details](#setup-details)
@@ -39,32 +39,7 @@ If you have **Word manuscripts** and need **newsletter posts, threads, or essays
 
 - **Never used GitHub?** That’s normal. Think of it as a **safe download page** for this project: you click **Code → Download ZIP**, unzip the folder, and follow the steps below. You are not “joining a club.” You’re just grabbing a copy of the app, like saving a file from email. (If you *do* use Git, clone works too, same result.)
 - **Your books stay on your machine.** The app reads your `.docx` files from a folder **you** choose. We’re not running a website that stores your novels in the cloud.
-- **This app is free and open source.** The part that *writes* text for you is an outside AI service. You put an **API key** (a secret code from that provider) in a file on your computer so only *your* account is charged when *you* run a draft. Typical cloud usage is small per run (often “coffee money,” not rent), or you can explore **self-hosted / open models** (see below). Book Post Writer is just the workspace; the model does the heavy lifting when you ask it to.
-
----
-
-### <span id="api-key-in-human-words">“API key” in human words 🔑</span>
-
-An **API key** is like a **password that only lets the AI bill *your* account** when *you* click “write draft.” You create it on the provider’s site and paste it into `.env` in this project (Quick start shows how).
-
-#### <span id="where-to-get-api-keys">Where to get API keys (pick one path to start)</span>
-
-| If you want… | Get a key here | Notes |
-| ------------ | -------------- | ----- |
-| **OpenAI** (what this repo uses out of the box) | [OpenAI API keys](https://platform.openai.com/api-keys) | Needs [OpenAI](https://platform.openai.com/) account; [usage pricing](https://openai.com/api/pricing/) is on their site. |
-| **Anthropic (Claude)** | [Anthropic Console](https://console.anthropic.com/) | Wiring into *this* codebase is DIY today; see [Technical details](#technical-details). |
-| **Many models, one dashboard** | [OpenRouter API keys](https://openrouter.ai/keys) | Useful if you like to experiment; still requires code changes to use here. |
-
-#### <span id="cloud-vs-open-local">Cloud vs “open” / local setups</span>
-
-- **Paid cloud APIs** (OpenAI, Anthropic, etc.): you register, add a payment method if required, create a key, paste it into `.env`. No key is stored by us; it never leaves your machine except when the app calls the provider.
-- **Open-source / self-hosted direction:** tools like **[Ollama](https://ollama.com/)** or **[LM Studio](https://lmstudio.ai/)** let you run models **on your own computer** with **no per-token bill** to a big vendor (your hardware does the work). This repo does **not** ship a one-click Ollama mode yet; hooking it up means developer work (same bucket as “use Claude instead”: small codebase, but you or Cursor / Claude Code would adapt the API calls).
-
-**This version of the app is set up for OpenAI first** (create an account, add billing if prompted, copy a key into `.env`; Quick start walks through it).
-
-**Prefer Claude, OpenRouter, or a local model?** The project is open source; if you use **Cursor**, **Claude Code**, or a developer friend, swapping or adding another backend is doable. It’s **not** a one-click switch today, but you’re not locked into a black box.
-
-You can ignore the jargon: follow the numbered steps in **Quick start** (right below) and you’ll only touch the key once.
+- **This app is free and open source.** The part that *writes* text for you is an outside AI service. You will paste a **secret code** (called an **API key**) into a file on your computer so only *your* account is charged when *you* run a draft. **Quick start** below gets you running; [**“API key” in human words**](#api-key-in-human-words) right after that explains the same idea in more detail if the jargon worries you.
 
 ---
 
@@ -117,7 +92,9 @@ If you are in the right place, typing **`dir`** (Windows) or **`ls`** (Mac / Lin
    npm install
    ```
    Wait until it finishes. You should see no red “ERR!” lines at the end.
-2. **API key**: Copy the example env file and add your OpenAI key (re-read **“API key” in human words** above if the phrase “API key” makes you nervous). Create a key at [OpenAI API keys](https://platform.openai.com/api-keys) if you do not have one.
+2. **Connect OpenAI (the step writers often pause on)**  
+   If **“API key”** sounds like nonsense, you are in good company. Before you paste anything, read [**“API key” in human words**](#api-key-in-human-words) **(the section right below Quick start)**. It is short: what that code is, that your books are not uploaded to us, rough cost, and where to click on OpenAI’s site.  
+   When you are ready, create a key at [OpenAI API keys](https://platform.openai.com/api-keys), then wire it into this project:
    - **Windows (Command Prompt):** `copy .env.example .env`
    - **Windows (PowerShell):** `Copy-Item .env.example .env`
    - **macOS / Linux:** `cp .env.example .env`  
@@ -126,7 +103,32 @@ If you are in the right place, typing **`dir`** (Windows) or **`ls`** (Mac / Lin
 4. **Run the app**: `npm run dev`, then open the URL the terminal prints (often [http://localhost:5173](http://localhost:5173)).
 5. **First draft**: In the **Load your books, then generate a post** section: **Scan my Word books (.docx)** → **Connect sources to the writer** → describe the post in the topic box → **Write draft post** (or **Do all steps automatically (slow)**). Your draft appears in **Your post draft** on the left and is saved under `data/output/` as `post-*.txt`.
 
-That is the whole happy path. The sections below explain what the app does in plain language, then options, the command line, and what to do when something goes wrong.
+That is the whole happy path. The next section, **“API key” in human words**, is there if you want a calmer explanation of step 2 (or if you skipped ahead). After that, **What you get** summarizes features, then the rest covers options, the command line, and troubleshooting.
+
+---
+
+## <span id="api-key-in-human-words">“API key” in human words 🔑</span>
+
+An **API key** is like a **password that only lets the AI bill *your* account** when *you* click “write draft.” You create it on the provider’s site and paste it into the **`.env`** file in this project (that is **Quick start**, step 2, above).
+
+**Reading order:** You can do **Quick start** first and treat this section as the “why and where” appendix, or read this section before step 2 if you like to understand the pieces before you click anything.
+
+### <span id="where-to-get-api-keys">Where to get API keys (pick one path to start)</span>
+
+| If you want… | Get a key here | Notes |
+| ------------ | -------------- | ----- |
+| **OpenAI** (what this repo uses out of the box) | [OpenAI API keys](https://platform.openai.com/api-keys) | Needs [OpenAI](https://platform.openai.com/) account; [usage pricing](https://openai.com/api/pricing/) is on their site. |
+| **Anthropic (Claude)** | [Anthropic Console](https://console.anthropic.com/) | Wiring into *this* codebase is DIY today; see [Technical details](#technical-details). |
+| **Many models, one dashboard** | [OpenRouter API keys](https://openrouter.ai/keys) | Useful if you like to experiment; still requires code changes to use here. |
+
+### <span id="cloud-vs-open-local">Cloud vs “open” / local setups</span>
+
+- **Paid cloud APIs** (OpenAI, Anthropic, etc.): you register, add a payment method if required, create a key, paste it into `.env`. No key is stored by us; it never leaves your machine except when the app calls the provider.
+- **Open-source / self-hosted direction:** tools like **[Ollama](https://ollama.com/)** or **[LM Studio](https://lmstudio.ai/)** let you run models **on your own computer** with **no per-token bill** to a big vendor (your hardware does the work). This repo does **not** ship a one-click Ollama mode yet; hooking it up means developer work (same bucket as “use Claude instead”: small codebase, but you or Cursor / Claude Code would adapt the API calls).
+
+**This version of the app is set up for OpenAI first** (create an account, add billing if prompted, copy a key into `.env`; **Quick start** step 2 walks through the file part).
+
+**Prefer Claude, OpenRouter, or a local model?** The project is open source; if you use **Cursor**, **Claude Code**, or a developer friend, swapping or adding another backend is doable. It’s **not** a one-click switch today, but you’re not locked into a black box.
 
 ---
 
