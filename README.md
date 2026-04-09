@@ -1,15 +1,36 @@
-# Manuscript topic lab
+# Book Post Writer
 
-Turn your book manuscripts (Word `.docx` files) into **topic-based essays**: the app reads your work, builds a searchable index with AI embeddings, and drafts a plain-text post grounded in *your* words. You describe what you want explored; the model proposes the public title and subtitle. Everything runs on your machine—no tie-in to a specific blog or publisher.
+### For writers who’d rather be writing than fighting software 📚
+
+If you have **Word manuscripts** and need **newsletter posts, threads, or essays** that still sound like *your* story—not a generic chatbot essay—this tool is for you. You describe the idea; it drafts text you can edit. **No publishing platform is required:** you get plain files you can paste anywhere.
 
 ---
 
-## What you get
+### You don’t have to be “good with computers” ✨
 
-- **Ingest & index** — Chunk and embed manuscripts from a folder you choose.
-- **Generate** — Enter a brief (themes, angles, questions—not the final headline) and get an essay saved as a timestamped `.txt` file.
-- **Optional voice** — Add samples of your published writing so new drafts feel like your cadence.
-- **Editor + style audit** — A local web UI to polish drafts with auditing tools.
+- **Never used GitHub?** That’s normal. Think of it as a **safe download page** for this project: you click **Code → Download ZIP**, unzip the folder, and follow the steps below. You are not “joining a club”—you’re just grabbing a copy of the app, like saving a file from email. (If you *do* use Git, clone works too—same result.)
+- **Your books stay on your machine.** The app reads your `.docx` files from a folder **you** choose. We’re not running a website that stores your novels in the cloud.
+- **You pay an AI company directly for usage** (usually small amounts per draft—think “coffee money,” not rent). That’s separate from this free tool: Book Post Writer is just the workspace; the AI does the heavy lifting when *you* ask it to.
+
+---
+
+### “API key” in human words 🔑
+
+An **API key** is like a **password that only lets the AI bill *your* account** when *you* click “write draft.”  
+
+- **This version of the app is set up for [OpenAI](https://platform.openai.com/)** (create an account there, add a little credit, copy a key into a file called `.env`—the Quick start walks through it).  
+- **Prefer Claude or another provider?** The codebase is small and open; if you use **Cursor**, **Claude Code**, or a developer friend, swapping or adding another API (e.g. Anthropic) is doable—it’s **not** a one-click switch today, but you’re not locked into a black box.
+
+You can ignore the jargon: follow the numbered steps in **Quick start** and you’ll only touch the key once.
+
+---
+
+## What you get (plain English)
+
+- **Load your books** 📂 — One manuscript or a whole series of Word files in a folder. Nothing gets “uploaded” to us; the app reads from your disk.
+- **Describe the post, not the headline** ✍️ — A short note: themes, questions, which characters or ideas matter. You get a **text file** you can copy into Substack, Mailchimp, Notes, wherever.
+- **Optional: match your voice** 🎙️ — Drop in samples of writing you’ve already published so drafts feel closer to how you usually sound.
+- **Edit on screen** 🖥️ — Buttons spell out what they do. Get suggestions, accept changes line by line or rewrite the whole draft, then **save** when it looks right.
 
 ---
 
@@ -20,14 +41,14 @@ Turn your book manuscripts (Word `.docx` files) into **topic-based essays**: the
    ```bash
    npm install
    ```
-3. **API key** — Copy the example env file and add your OpenAI key:
+3. **API key** — Copy the example env file and add your OpenAI key (re-read the **“API key” in human words** section above if the phrase “API key” makes you nervous):
    - **Windows (Command Prompt):** `copy .env.example .env`
    - **Windows (PowerShell):** `Copy-Item .env.example .env`
    - **macOS / Linux:** `cp .env.example .env`  
    Then open `.env` and set `OPENAI_API_KEY` to your key.
 4. **Manuscripts** — Put your book `.docx` files in `data/books/`, *or* point the app elsewhere (see [Where your books live](#where-your-books-live) below).
 5. **Run the app** — `npm run dev`, then open the URL the terminal prints (often [http://localhost:5173](http://localhost:5173)).
-6. **First draft** — In the **Index & generator** area: run **Ingest** (books) → **Build vectors** → type your topic brief → **Generate post** (or **Full run**). Your draft appears in the **Post** pane and is saved under `data/output/` as `post-*.txt`.
+6. **First draft** — In the **Load your books, then generate a post** section: **Scan my Word books (.docx)** → **Connect sources to the writer** → describe the post in the topic box → **Write draft post** (or **Do all steps automatically (slow)**). Your draft appears in **Your post draft** on the left and is saved under `data/output/` as `post-*.txt`.
 
 That is the whole happy path. The sections below explain options, the command line, and what to do when something goes wrong.
 
@@ -44,7 +65,7 @@ That is the whole happy path. The sections below explain options, the command li
 
 ## Setup details
 
-The npm package name is **`manuscript-topic-lab`**. If your folder name differs, you can rename the folder when nothing has it open (close the editor first).
+The npm package name is **`book-post-writer`**. If your folder name differs, you can rename the folder when nothing has it open (close the editor first).
 
 **Optional config file** — For models, paths, and draft tuning, copy the example and edit:
 
@@ -79,9 +100,9 @@ The UI status line shows which path the API is actually using.
 ## Walkthrough: from `.docx` to a post
 
 1. **Book folder** — Use `data/books/`, or set `paths.books` / `PIPELINE_BOOKS` as above. The browser does **not** upload files; the local API reads `.docx` from disk.
-2. **Voice (optional)** — Add `.docx` or plain `.txt` samples of *your* writing under `data/voice/`. See `data/voice/README.txt`. After adding files, run **Ingest** for voice (or **All**) and **Build vectors** again.
+2. **Voice (optional)** — Add `.docx` or plain `.txt` samples of *your* writing under `data/voice/`. See `data/voice/README.txt`. After adding files, run **Scan my writing samples** (or **Scan everything (slow)**) and **Connect sources to the writer** again.
 3. **Topic box** — Treat it like a **creative brief**: what to explore, which angles matter, questions you want answered. You do **not** type the final headline there; the model generates title and subtitle with the essay.
-4. **UI flow** — **Ingest** (Books / Voice / All) → **Build vectors** → **Generate post** or **Full run**. After a browser refresh, use **Reload from disk** if needed. Use **Style audit** on the right to refine tone and structure.
+4. **UI flow** — Scan books and/or voice → **Connect sources to the writer** → **Write draft post** or **Do all steps automatically (slow)**. After a browser refresh, use **Open last saved draft from disk** if needed. Use **Get writing suggestions** and **Suggestions & edits** on the right to refine wording.
 5. **CLI alternative** — Same pipeline from the terminal:
 
    ```bash
@@ -121,7 +142,7 @@ More tips: `data/books/README.txt` and `data/voice/README.txt`.
 | `npm run full` | Ingest → embed → draft (`--prompt` required). |
 | `npm run pipeline:check` | Typecheck `pipeline/`, `cli/`, and `server/`. |
 | `npm run dev` | **Recommended:** local editor API (port **8787**) + Vite dev server together. |
-| `npm run dev:vite` | Frontend only (no `/api`—use if you skip the audit lab). |
+| `npm run dev:vite` | Frontend only (no `/api`—use if you skip the local editor API and suggestions UI). |
 | `npm run editor-api` | API only on 8787 (use with `dev:vite` in a second terminal if you prefer). |
 
 ### Two terminals instead of `npm run dev`
@@ -141,7 +162,7 @@ npx tsx cli/full.ts --prompt "Same kind of topic ideas as for draft"
 
 ### Browser UI notes
 
-Open the Vite URL (often [http://localhost:5173](http://localhost:5173)). The **Post** pane is plain text—the same content as `post-*.txt`. **Run audit**, **Apply checked**, and **Apply with model** work on that text. The API reads `OPENAI_API_KEY` and `pipeline.config.json` from the **repo root**. Draft and full pipeline requests need a topic field (`customTopicPrompt` in the API)—the UI wires this for you.
+Open the Vite URL (often [http://localhost:5173](http://localhost:5173)). **Your post draft** (left) is plain text—the same content as `post-*.txt`. **Get writing suggestions**, **Apply checked changes to draft**, and **Rewrite whole draft with AI** work on that text. The API reads `OPENAI_API_KEY` and `pipeline.config.json` from the **repo root**. Draft and full pipeline requests need a topic field (`customTopicPrompt` in the API)—the UI wires this for you.
 
 ---
 
@@ -150,15 +171,41 @@ Open the Vite URL (often [http://localhost:5173](http://localhost:5173)). The **
 | Symptom | Things to check |
 | ------- | ---------------- |
 | Errors about API key | `OPENAI_API_KEY` is set in `.env` at the repo root; restart `npm run dev` after changes. |
-| Empty or useless drafts | At least one `.docx` in your books folder; run **Ingest** then **Build vectors** before generating. |
+| Empty or useless drafts | At least one `.docx` in your books folder; scan sources then **Connect sources to the writer** before **Write draft post**. |
 | CLI exits non-zero | Usually missing key, missing book files, or missing embeddings before `draft` / `full`. Messages are short on purpose—read the last line. |
 | Voice folder empty | Ingest does **not** fail if `data/voice/` is empty; voice is optional. |
 | Port already in use | Another app may be on 5173 or 8787; stop it or adjust Vite / server config if you have customized ports. |
 
 ---
 
-## Architecture
+## Technical details
 
-For module layout and pipeline order, see [`PROJECT_PLAN.md`](PROJECT_PLAN.md).
+*For developers, tinkerers, and anyone who likes the full picture.*
 
-Code layout in short: **UI** = Vite + React; **generation and indexing** = `pipeline/` and `cli/`; **local HTTP API** = `server/`.
+### What happens under the hood
+
+- **Ingest & index** — Manuscripts are read from disk, split into chunks, and indexed with **OpenAI embeddings** so retrieval can pull relevant passages for a given topic.
+- **Generate / draft** — A chat model (default **`gpt-5.4`**) writes a plain-text post using retrieved evidence from your books (and optional voice samples). You supply a **topic brief**; the model proposes **title and subtitle** plus body. Output is timestamped `.txt` under `data/output/`.
+- **Optional voice** — Extra `.docx` / `.txt` under `data/voice/` are chunked and embedded the same way; draft prompts include “voice” evidence so cadence can track your samples.
+- **Editor UI** — Vite + React front end; local **HTTP API** (`server/editor-server.ts`, default port **8787**) runs ingest, embed, draft, audit, and save routes. **Style audit** flow: model produces a report → optional **parse pairs** → literal replace or **model merge** on the draft text.
+
+### Repo layout
+
+| Area | Role |
+| ---- | ---- |
+| `src/` | React UI |
+| `pipeline/` | Chunking, embeddings, retrieval, drafting, audit |
+| `cli/` | Same pipeline from the command line |
+| `server/` | Local API used by the browser |
+
+Module layout and pipeline ordering: [`PROJECT_PLAN.md`](PROJECT_PLAN.md).
+
+### Defaults worth knowing
+
+- Embeddings: **`text-embedding-3-small`**
+- Optional **`models.reasoningEffort`** in `pipeline.config.json`: `none` | `low` | `medium` | `high` | `xhigh`
+- Generated index files: `data/index/chunks.json`, `embeddings.json`, `topic-history.json` (recreated by ingest / embed; large repos can produce very large files)
+
+### Other AI providers (e.g. Claude)
+
+The default build uses **OpenAI** for both **embeddings** and **chat** (see `pipeline/openai-client.ts` and embedding call sites). **Anthropic Claude** (or another vendor) is **not** a drop-in setting yet—swapping providers means adapting those clients and keeping retrieval compatible with however you embed text. Fine for a Cursor / Claude Code pass or a small PR; not required for normal use.
