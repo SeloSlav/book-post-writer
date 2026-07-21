@@ -31,6 +31,22 @@ import {
 const PORT = Number(process.env.EDITOR_API_PORT ?? 8787);
 const MAX_JSON_BYTES = 30 * 1024 * 1024;
 
+async function updateEnvSetting(name: string, value: string): Promise<void> {
+  const envPath = path.join(repoRoot(), ".env");
+  let existing = "";
+  try {
+    existing = await fs.readFile(envPath, "utf8");
+  } catch {
+    existing = "";
+  }
+  const nextLine = `${name}=${value}`;
+  const matcher = new RegExp(`^${name}=.*$`, "m");
+  const next = matcher.test(existing)
+    ? existing.replace(matcher, nextLine)
+    : `${existing.trimEnd()}${existing.trim() ? "\n" : ""}${nextLine}\n`;
+  await fs.writeFile(envPath, next, "utf8");
+}
+
 /** Path only: strip query, fragment, trailing slash, and tolerate absolute req.url from some proxies. */
 function apiPath(req: IncomingMessage): string {
   let raw = req.url ?? "/";
@@ -118,20 +134,34 @@ const server = createServer(async (req, res) => {
         sendJson(res, 400, { error: "Enter a valid OpenAI API key beginning with sk-." });
         return;
       }
-      const envPath = path.join(repoRoot(), ".env");
-      let existing = "";
-      try {
-        existing = await fs.readFile(envPath, "utf8");
-      } catch {
-        existing = "";
-      }
-      const nextLine = `OPENAI_API_KEY=${apiKey}`;
-      const next = /^OPENAI_API_KEY=.*$/m.test(existing)
-        ? existing.replace(/^OPENAI_API_KEY=.*$/m, nextLine)
-        : `${existing.trimEnd()}${existing.trim() ? "\n" : ""}${nextLine}\n`;
-      await fs.writeFile(envPath, next, "utf8");
+      await updateEnvSetting("OPENAI_API_KEY", apiKey);
       process.env.OPENAI_API_KEY = apiKey;
       sendJson(res, 200, { ok: true });
+      return;
+    }
+
+    if (req.method === "POST" && url === "/api/settings/books-path") {
+      const body = (await readJsonBody(req)) as { booksPath?: string };
+      const requested = typeof body.booksPath === "string" ? body.booksPath.trim() : "";
+      if (!requested || requested.length > 1000 || /[\r\n]/.test(requested)) {
+        sendJson(res, 400, { error: "Enter a valid folder path." });
+        return;
+      }
+      const resolved = path.isAbsolute(requested)
+        ? path.normalize(requested)
+        : path.resolve(repoRoot(), requested);
+      try {
+        const stat = await fs.stat(resolved);
+        if (!stat.isDirectory()) throw new Error("not a directory");
+      } catch {
+        sendJson(res, 400, {
+          error: "That folder could not be found. Check the path and try again.",
+        });
+        return;
+      }
+      await updateEnvSetting("PIPELINE_BOOKS", resolved);
+      process.env.PIPELINE_BOOKS = resolved;
+      sendJson(res, 200, { ok: true, status: await getPipelineStatus() });
       return;
     }
 
@@ -161,7 +191,7 @@ const server = createServer(async (req, res) => {
     if (req.method === "POST" && url === "/api/pipeline/upload-sources") {
       const body = (await readJsonBody(req)) as {
         kind?: "book" | "voice";
-        files?: Array<{ name?: string; dataBase64?: string }>;
+        files?: Array<{ name?: string; relativePath?: string; dataBase64?: string }>;
       };
       const kind = body.kind;
       const files = Array.isArray(body.files) ? body.files : [];
@@ -169,8 +199,8 @@ const server = createServer(async (req, res) => {
         sendJson(res, 400, { error: "Choose manuscript or voice-sample files." });
         return;
       }
-      if (files.length === 0 || files.length > 10) {
-        sendJson(res, 400, { error: "Add between 1 and 10 files at a time." });
+      if (files.length === 0 || files.length > 50) {
+        sendJson(res, 400, { error: "Add between 1 and 50 files at a time." });
         return;
       }
       const cfg = loadConfig();
@@ -179,9 +209,18 @@ const server = createServer(async (req, res) => {
       await fs.mkdir(targetDir, { recursive: true });
       const saved: string[] = [];
       for (const item of files) {
-        const safeName = path.basename(String(item.name ?? ""));
+        const rawRelative = String(item.relativePath || item.name || "").replace(/\\/g, "/");
+        const parts = rawRelative.split("/").filter(Boolean);
+        const safeRelative = parts.join(path.sep);
+        const safeName = path.basename(safeRelative);
         const extension = path.extname(safeName).toLowerCase();
-        if (!safeName || !allowed.has(extension) || typeof item.dataBase64 !== "string") {
+        if (
+          !safeName ||
+          parts.some((part) => part === "." || part === "..") ||
+          path.isAbsolute(rawRelative) ||
+          !allowed.has(extension) ||
+          typeof item.dataBase64 !== "string"
+        ) {
           sendJson(res, 400, {
             error:
               kind === "book"
@@ -195,8 +234,15 @@ const server = createServer(async (req, res) => {
           sendJson(res, 400, { error: `${safeName} must be smaller than 15 MB.` });
           return;
         }
-        await fs.writeFile(path.join(targetDir, safeName), data);
-        saved.push(safeName);
+        const targetPath = path.resolve(targetDir, safeRelative);
+        const relativeToTarget = path.relative(path.resolve(targetDir), targetPath);
+        if (relativeToTarget.startsWith("..") || path.isAbsolute(relativeToTarget)) {
+          sendJson(res, 400, { error: "A selected file had an invalid folder path." });
+          return;
+        }
+        await fs.mkdir(path.dirname(targetPath), { recursive: true });
+        await fs.writeFile(targetPath, data);
+        saved.push(safeRelative.split(path.sep).join("/"));
       }
       sendJson(res, 200, { ok: true, saved });
       return;

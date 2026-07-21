@@ -160,12 +160,16 @@ copy pipeline.config.example.json pipeline.config.json
 
 ### <span id="where-your-books-live">Where your books live</span>
 
-The pipeline looks for `.docx` files in the folder set by:
+Open **Library tools & activity** in Draftloom and paste the path to any existing manuscript folder into **Manuscript folder**. Draftloom validates the folder, remembers it, and scans every `.docx` inside it—including nested folders.
+
+You can also use **Add books** to copy selected documents into the current library, or **Import a folder** to copy a whole folder while preserving its subfolders. Top-level subfolders appear as collections in the UI, so a structure such as `My Novels/Series One/*.docx` and `My Novels/Series Two/*.docx` stays organized.
+
+For manual configuration, the pipeline looks for `.docx` files in the folder set by:
 
 - **`paths.books`** in `pipeline.config.json` (path **relative to the repo root**, e.g. `data/books`, or an **absolute** path on your computer), **or**
 - **`PIPELINE_BOOKS`** in `.env` overrides `paths.books` if set (handy on Windows, e.g. `PIPELINE_BOOKS=C:\MyNovels\Series`).
 
-The UI status line shows which path the API is actually using.
+The in-app folder setting writes the `PIPELINE_BOOKS` value for you.
 
 **Draft tuning (optional)**: In `pipeline.config.json`, under `draft`:
 

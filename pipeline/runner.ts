@@ -3,7 +3,11 @@ import path from "node:path";
 import { loadConfig } from "./config.js";
 import { generatePost } from "./draft.js";
 import { embedChunks } from "./embeddings.js";
-import { collectVoiceFolderFiles, ingestSourceFolder } from "./ingest.js";
+import {
+  collectDocxFiles,
+  collectVoiceFolderFiles,
+  ingestSourceFolder,
+} from "./ingest.js";
 import { getOpenAI } from "./openai-client.js";
 import {
   EDITOR_SUPPLIED_BRIEF_TOPIC_TITLE,
@@ -62,6 +66,11 @@ export async function pipelineIngestBooksOnly(): Promise<IngestResult> {
     chunks,
   });
   await writeIndex(cfg.paths.indexDir, payload);
+  await fs.writeFile(
+    path.join(cfg.paths.indexDir, "books-root.txt"),
+    path.resolve(cfg.paths.books),
+    "utf8",
+  );
   const pruned = await pruneEmbeddingsToMatchIndex(cfg.paths.indexDir);
   if (pruned > 0) logPipeline(`Ingest books: pruned ${pruned} orphan embedding(s).`);
   logPipeline(`Ingest books: done.`);
@@ -171,6 +180,11 @@ export async function pipelineIngest(): Promise<IngestResult> {
     chunks,
   });
   await writeIndex(cfg.paths.indexDir, payload);
+  await fs.writeFile(
+    path.join(cfg.paths.indexDir, "books-root.txt"),
+    path.resolve(cfg.paths.books),
+    "utf8",
+  );
   const pruned = await pruneEmbeddingsToMatchIndex(cfg.paths.indexDir);
   if (pruned > 0) logPipeline(`Ingest all: pruned ${pruned} orphan embedding(s).`);
   logPipeline(`Ingest all: done.`);
@@ -302,6 +316,7 @@ export async function pipelineDraft(params: {
 export type PipelineStatus = {
   booksPath: string;
   bookFileCount: number;
+  bookGroups: Array<{ name: string; count: number }>;
   voiceFileCount: number;
   chunkCount: number;
   embeddedCount: number;
@@ -315,24 +330,33 @@ export type PipelineStatus = {
 
 async function sourceFilesIn(
   dir: string,
-  extensions: string[],
-): Promise<{ count: number; newestMtime: number }> {
+  source: "book" | "voice",
+): Promise<{ count: number; newestMtime: number; files: string[] }> {
   try {
-    const entries = await fs.readdir(dir, { withFileTypes: true });
-    const allowed = new Set(extensions.map((ext) => ext.toLowerCase()));
-    const files = entries.filter(
-      (entry) =>
-        entry.isFile() &&
-        !entry.name.toLowerCase().startsWith("readme") &&
-        allowed.has(path.extname(entry.name).toLowerCase()),
-    );
+    const files =
+      source === "book"
+        ? await collectDocxFiles(dir)
+        : await collectVoiceFolderFiles(dir);
     const mtimes = await Promise.all(
-      files.map((entry) => fs.stat(path.join(dir, entry.name)).then((stat) => stat.mtimeMs)),
+      files.map((file) => fs.stat(file).then((stat) => stat.mtimeMs)),
     );
-    return { count: files.length, newestMtime: Math.max(0, ...mtimes) };
+    return { count: files.length, newestMtime: Math.max(0, ...mtimes), files };
   } catch {
-    return { count: 0, newestMtime: 0 };
+    return { count: 0, newestMtime: 0, files: [] };
   }
+}
+
+function groupBookFiles(rootDir: string, files: string[]): Array<{ name: string; count: number }> {
+  const counts = new Map<string, number>();
+  for (const file of files) {
+    const relative = path.relative(rootDir, file);
+    const parts = relative.split(path.sep).filter(Boolean);
+    const group = parts.length > 1 ? parts[0]! : "Unsorted";
+    counts.set(group, (counts.get(group) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => (a.name === "Unsorted" ? 1 : b.name === "Unsorted" ? -1 : a.name.localeCompare(b.name)));
 }
 
 async function modifiedAt(filePath: string): Promise<number> {
@@ -346,8 +370,8 @@ async function modifiedAt(filePath: string): Promise<number> {
 export async function getPipelineStatus(): Promise<PipelineStatus> {
   const cfg = loadConfig();
   const [books, voice] = await Promise.all([
-    sourceFilesIn(cfg.paths.books, [".docx"]),
-    sourceFilesIn(cfg.paths.voice, [".docx", ".txt"]),
+    sourceFilesIn(cfg.paths.books, "book"),
+    sourceFilesIn(cfg.paths.voice, "voice"),
   ]);
   let chunkCount = 0;
   let embeddedCount = 0;
@@ -390,14 +414,25 @@ export async function getPipelineStatus(): Promise<PipelineStatus> {
     path.join(cfg.paths.indexDir, "embeddings.json"),
   );
   const newestSource = Math.max(books.newestMtime, voice.newestMtime);
+  let indexedBooksRoot = "";
+  try {
+    indexedBooksRoot = (
+      await fs.readFile(path.join(cfg.paths.indexDir, "books-root.txt"), "utf8")
+    ).trim();
+  } catch {
+    indexedBooksRoot = "";
+  }
+  const booksRootChanged = path.resolve(indexedBooksRoot || ".") !== path.resolve(cfg.paths.books);
   const sourcesNeedScan =
-    books.count > 0 && (chunkCount === 0 || newestSource > chunksModifiedAt);
+    books.count > 0 &&
+    (chunkCount === 0 || booksRootChanged || newestSource > chunksModifiedAt);
   const embeddingsNeedRefresh =
     chunkCount > 0 &&
     (embeddedCount < chunkCount || embeddingsModifiedAt < chunksModifiedAt);
   return {
     booksPath: cfg.paths.books,
     bookFileCount: books.count,
+    bookGroups: groupBookFiles(cfg.paths.books, books.files),
     voiceFileCount: voice.count,
     chunkCount,
     embeddedCount,

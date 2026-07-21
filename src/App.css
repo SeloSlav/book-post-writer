@@ -552,16 +552,20 @@ main {
   background: #f7f4ed;
 }
 
+.library-strip-wrap {
+  margin: 30px 48px 0;
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background: #faf8f2;
+}
+
 .library-strip {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  margin: 30px 48px 0;
   padding: 16px 18px;
-  border: 1px solid var(--line-soft);
-  border-radius: 14px;
-  background: #faf8f2;
 }
 
 .library-summary {
@@ -611,6 +615,54 @@ main {
 .text-button:hover:not(:disabled) {
   color: #17372d;
   text-decoration: underline;
+}
+
+.library-collections {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 13px 18px;
+  border-top: 1px solid var(--line-soft);
+  background: #f6f4ee;
+}
+
+.library-collections > span {
+  color: var(--muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.library-collections > div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.collection-chip {
+  padding: 5px 8px;
+  border: 1px solid #d9ddd7;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.collection-chip strong {
+  margin-left: 4px;
+  color: var(--sage-deep);
+}
+
+.library-collections small {
+  max-width: 280px;
+  color: var(--muted);
+  font-size: 0.63rem;
+  line-height: 1.4;
+  text-align: right;
 }
 
 .prompt-workspace {
@@ -758,6 +810,49 @@ main {
 
 .advanced-tools-body {
   padding: 0 48px 26px;
+}
+
+.library-location-editor {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.7fr) minmax(320px, 1.3fr);
+  align-items: end;
+  gap: 24px;
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: #fffdf8;
+}
+
+.library-location-editor strong {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 0.92rem;
+}
+
+.library-location-editor p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.folder-path-entry {
+  display: flex;
+  min-width: 0;
+  gap: 8px;
+}
+
+.folder-path-entry input {
+  min-width: 0;
+  flex: 1;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.68rem;
 }
 
 .advanced-button-row {
@@ -1551,14 +1646,25 @@ main {
     flex-direction: column;
   }
 
+  .library-strip-wrap {
+    margin: 22px 22px 0;
+  }
+
   .library-strip {
     align-items: flex-start;
     flex-direction: column;
-    margin: 22px 22px 0;
   }
 
   .library-actions {
     justify-content: flex-start;
+  }
+
+  .library-collections {
+    grid-template-columns: 1fr;
+  }
+
+  .library-collections small {
+    text-align: left;
   }
 
   .prompt-workspace {
@@ -1591,6 +1697,16 @@ main {
 
   .advanced-tools-body {
     padding: 0 22px 22px;
+  }
+
+  .library-location-editor {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .folder-path-entry {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .editor-section {

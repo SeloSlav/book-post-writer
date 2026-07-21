@@ -11,6 +11,7 @@ import {
 export type PipelineStatus = {
   booksPath: string
   bookFileCount: number
+  bookGroups: Array<{ name: string; count: number }>
   voiceFileCount: number
   chunkCount: number
   embeddedCount: number
@@ -101,6 +102,7 @@ export function PipelinePanel({
   const [activeAction, setActiveAction] = useState('')
   const [topicPrompt, setTopicPrompt] = useState('')
   const [apiKey, setApiKey] = useState('')
+  const [booksPathDraft, setBooksPathDraft] = useState('')
   const [keySaving, setKeySaving] = useState(false)
   const [logOpen, setLogOpen] = useState(false)
   const logEndRef = useRef<HTMLPreElement>(null)
@@ -132,6 +134,10 @@ export function PipelinePanel({
   useEffect(() => {
     if (apiOnline !== false) void refreshStatus()
   }, [apiOnline, refreshStatus])
+
+  useEffect(() => {
+    if (status?.booksPath) setBooksPathDraft(status.booksPath)
+  }, [status?.booksPath])
 
   useEffect(() => {
     if (!busy) return
@@ -226,9 +232,21 @@ export function PipelinePanel({
 
   const uploadFiles = async (kind: 'book' | 'voice', selected: FileList | null) => {
     if (!selected || selected.length === 0 || auditBusy || busy || keySaving) return
-    const files = Array.from(selected)
-    if (files.length > 10) {
-      pushLocal(setLocalNotes, 'Add no more than 10 files at a time.')
+    const allowedExtensions = kind === 'book' ? ['.docx'] : ['.docx', '.txt']
+    const selectedFiles = Array.from(selected)
+    const files = selectedFiles.filter((file) =>
+      allowedExtensions.some((extension) => file.name.toLowerCase().endsWith(extension)),
+    )
+    if (files.length === 0) {
+      pushLocal(
+        setLocalNotes,
+        kind === 'book' ? 'No Word .docx files were found in that selection.' : 'No .docx or .txt files were found in that selection.',
+      )
+      setLogOpen(true)
+      return
+    }
+    if (files.length > 200) {
+      pushLocal(setLocalNotes, 'Choose a folder with no more than 200 supported files at a time.')
       setLogOpen(true)
       return
     }
@@ -243,25 +261,84 @@ export function PipelinePanel({
     setActiveAction(label)
     onPipelineBusy(true)
     try {
-      const payload = await Promise.all(
-        files.map(async (file) => ({ name: file.name, dataBase64: await fileToBase64(file) })),
-      )
-      const response = await fetch('/api/pipeline/upload-sources', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind, files: payload }),
-      })
-      const data = await readApiJson<{ saved?: string[]; error?: string }>(response)
-      if (!response.ok) throw new Error(data.error ?? response.statusText)
+      const batches: File[][] = []
+      let batch: File[] = []
+      let batchBytes = 0
+      for (const file of files) {
+        if (batch.length >= 40 || (batch.length > 0 && batchBytes + file.size > 20 * 1024 * 1024)) {
+          batches.push(batch)
+          batch = []
+          batchBytes = 0
+        }
+        batch.push(file)
+        batchBytes += file.size
+      }
+      if (batch.length > 0) batches.push(batch)
+
+      let uploaded = 0
+      for (const [batchIndex, currentBatch] of batches.entries()) {
+        setActiveAction(`${label} (${batchIndex + 1}/${batches.length})`)
+        const payload = await Promise.all(
+          currentBatch.map(async (file) => ({
+            name: file.name,
+            relativePath: file.webkitRelativePath || file.name,
+            dataBase64: await fileToBase64(file),
+          })),
+        )
+        const response = await fetch('/api/pipeline/upload-sources', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind, files: payload }),
+        })
+        const data = await readApiJson<{ saved?: string[]; error?: string }>(response)
+        if (!response.ok) throw new Error(data.error ?? response.statusText)
+        uploaded += data.saved?.length ?? currentBatch.length
+      }
       pushLocal(
         setLocalNotes,
-        `${files.length} ${kind === 'book' ? 'manuscript' : 'voice sample'}${files.length === 1 ? '' : 's'} added.`,
+        `${uploaded} ${kind === 'book' ? 'manuscript' : 'voice sample'}${uploaded === 1 ? '' : 's'} added${selectedFiles.length > files.length ? `; ${selectedFiles.length - files.length} unsupported file${selectedFiles.length - files.length === 1 ? '' : 's'} skipped` : ''}.`,
       )
       await refreshStatus()
     } catch (error) {
       pushLocal(
         setLocalNotes,
         `${label} failed: ${error instanceof Error ? error.message : String(error)}`,
+      )
+      setLogOpen(true)
+    } finally {
+      setBusy(false)
+      setActiveAction('')
+      onPipelineBusy(false)
+    }
+  }
+
+  const saveBooksPath = async () => {
+    const nextPath = booksPathDraft.trim()
+    if (!nextPath || disabled || nextPath === status?.booksPath) return
+    setBusy(true)
+    setActiveAction('Switching manuscript folder')
+    onPipelineBusy(true)
+    try {
+      const response = await fetch('/api/settings/books-path', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booksPath: nextPath }),
+      })
+      const data = await readApiJson<{
+        status?: PipelineStatus
+        error?: string
+      }>(response)
+      if (!response.ok) throw new Error(data.error ?? response.statusText)
+      if (data.status) setStatus(data.status)
+      else await refreshStatus()
+      pushLocal(
+        setLocalNotes,
+        'Manuscript folder changed. Draftloom will prepare this library before the next draft.',
+      )
+    } catch (error) {
+      pushLocal(
+        setLocalNotes,
+        `Could not change the manuscript folder: ${error instanceof Error ? error.message : String(error)}`,
       )
       setLogOpen(true)
     } finally {
@@ -410,7 +487,7 @@ export function PipelinePanel({
               <div className="setup-card-copy">
                 <span className="setup-kicker">Your source material</span>
                 <h2>Add your manuscripts</h2>
-                <p>Choose up to 10 Word documents. They stay on your computer.</p>
+                <p>Choose individual Word documents, or import a whole folder below. They stay on your computer.</p>
                 <span className="inline-link">Choose .docx files <span>→</span></span>
               </div>
             </label>
@@ -419,24 +496,48 @@ export function PipelinePanel({
       )}
 
       {status && hasBooks && (
-        <div className="library-strip">
-          <div className="library-summary">
-            <span className="library-icon file-icon" aria-hidden="true">W</span>
-            <div>
-              <strong>{status.bookFileCount} manuscript{status.bookFileCount === 1 ? '' : 's'} in your library</strong>
-              <small>{status.voiceFileCount > 0 ? `${status.voiceFileCount} voice sample${status.voiceFileCount === 1 ? '' : 's'} added` : 'Voice matching is optional'}</small>
+        <div className="library-strip-wrap">
+          <div className="library-strip">
+            <div className="library-summary">
+              <span className="library-icon file-icon" aria-hidden="true">W</span>
+              <div>
+                <strong>{status.bookFileCount} manuscript{status.bookFileCount === 1 ? '' : 's'} in your library</strong>
+                <small>{status.voiceFileCount > 0 ? `${status.voiceFileCount} voice sample${status.voiceFileCount === 1 ? '' : 's'} added` : 'Voice matching is optional'}</small>
+              </div>
+            </div>
+            <div className="library-actions">
+              <label className="text-button">
+                Add books
+                <input type="file" accept=".docx" multiple disabled={disabled} onChange={onFiles('book')} />
+              </label>
+              <label className="text-button">
+                Import a folder
+                <input
+                  type="file"
+                  accept=".docx"
+                  multiple
+                  disabled={disabled}
+                  onChange={onFiles('book')}
+                  {...({ webkitdirectory: '', directory: '' } as Record<string, string>)}
+                />
+              </label>
+              <label className="text-button">
+                Add voice samples
+                <input type="file" accept=".docx,.txt" multiple disabled={disabled} onChange={onFiles('voice')} />
+              </label>
             </div>
           </div>
-          <div className="library-actions">
-            <label className="text-button">
-              Add books
-              <input type="file" accept=".docx" multiple disabled={disabled} onChange={onFiles('book')} />
-            </label>
-            <label className="text-button">
-              Add voice samples
-              <input type="file" accept=".docx,.txt" multiple disabled={disabled} onChange={onFiles('voice')} />
-            </label>
-          </div>
+          {status.bookGroups.length > 0 && (
+            <div className="library-collections" aria-label="Library collections">
+              <span>Collections</span>
+              <div>
+                {status.bookGroups.map((group) => (
+                  <span className="collection-chip" key={group.name}>{group.name} <strong>{group.count}</strong></span>
+                ))}
+              </div>
+              <small>Use subfolders inside your manuscript folder to organize series, worlds, or projects.</small>
+            </div>
+          )}
         </div>
       )}
 
@@ -482,13 +583,33 @@ export function PipelinePanel({
       <details className="advanced-tools">
         <summary>Library tools & activity</summary>
         <div className="advanced-tools-body">
+          <div className="library-location-editor">
+            <div>
+              <strong>Manuscript folder</strong>
+              <p>Point Draftloom at any existing folder on this computer. Nested folders become collections automatically.</p>
+            </div>
+            <div className="folder-path-entry">
+              <input
+                type="text"
+                value={booksPathDraft}
+                disabled={disabled}
+                onChange={(event) => setBooksPathDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void saveBooksPath()
+                }}
+                placeholder="C:\\My Books\\Manuscripts"
+                aria-label="Manuscript folder path"
+                spellCheck={false}
+              />
+              <button type="button" disabled={disabled || !booksPathDraft.trim() || booksPathDraft.trim() === status?.booksPath} onClick={() => void saveBooksPath()}>Use this folder</button>
+            </div>
+          </div>
           <div className="advanced-button-row">
             <button type="button" disabled={disabled} onClick={() => run('Refreshing manuscripts', '/api/pipeline/ingest-books')}>Rescan books</button>
             <button type="button" disabled={disabled} onClick={() => run('Refreshing voice samples', '/api/pipeline/ingest-voice')}>Rescan voice</button>
             <button type="button" disabled={disabled} onClick={() => run('Preparing source passages', '/api/pipeline/embed')}>Prepare passages</button>
             <button type="button" disabled={disabled} onClick={() => void refreshStatus()}>Refresh status</button>
           </div>
-          <p className="path-note" title={status?.booksPath}>Manuscript folder: {status?.booksPath ?? 'Loading…'}</p>
           <details className="activity-log" open={logOpen} onToggle={(event) => setLogOpen(event.currentTarget.open)}>
             <summary>{busy ? 'Working now — view activity' : 'View recent activity'}</summary>
             <pre ref={logEndRef} aria-live="polite">{logText}{localBlock}</pre>
