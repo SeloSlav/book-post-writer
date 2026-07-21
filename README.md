@@ -1,4 +1,6 @@
-# Book Post Writer
+# Draftloom
+
+**A private AI author studio that turns your manuscripts into thoughtful newsletter drafts.**
 
 ## Contents
 
@@ -49,7 +51,7 @@ If you have **Word manuscripts** and need **newsletter posts, threads, or essays
 
 Do this section once. If you already installed Node.js in the past, skip to **Check that it worked**, then jump to step 1 under **Then run these commands**.
 
-**What is Node.js?** A free program that lets your computer run Book Post Writer. You are not “coding”; you are just installing the same engine many modern apps use.
+**What is Node.js?** A free program that lets your computer run Draftloom. You are not “coding”; you are just installing the same engine many modern apps use.
 
 #### Download and install Node.js
 
@@ -74,12 +76,12 @@ Then type **`npm -v`** and press **Enter**. You should see another version numbe
 
 If either command says **not recognized**, **command not found**, or similar, Node is not on your PATH yet: restart the computer once, or reinstall Node and make sure you used the default options. On Windows, open a **new** PowerShell window after installing.
 
-#### Get “into” the Book Post Writer folder
+#### Get “into” the Draftloom folder
 
 Commands like `npm install` only work when the terminal is **inside** the folder you unzipped (the one that contains **`package.json`**).
 
-- **Windows (File Explorer + PowerShell):** In File Explorer, open the Book Post Writer folder. Click the **address bar** at the top, press **Ctrl + C** to copy the path. In PowerShell, type **`cd `** (cd, then a space), **right-click** to paste the path, press **Enter**.
-- **Mac (Finder + Terminal):** In Terminal, type **`cd `** (cd, then a space). **Drag the Book Post Writer folder** from Finder into the Terminal window (it drops the full path). Press **Enter**.
+- **Windows (File Explorer + PowerShell):** In File Explorer, open the Draftloom folder. Click the **address bar** at the top, press **Ctrl + C** to copy the path. In PowerShell, type **`cd `** (cd, then a space), **right-click** to paste the path, press **Enter**.
+- **Mac (Finder + Terminal):** In Terminal, type **`cd `** (cd, then a space). **Drag the Draftloom folder** from Finder into the Terminal window (it drops the full path). Press **Enter**.
 
 If you are in the right place, typing **`dir`** (Windows) or **`ls`** (Mac / Linux) should list files including **`package.json`**.
 
@@ -92,16 +94,10 @@ If you are in the right place, typing **`dir`** (Windows) or **`ls`** (Mac / Lin
    npm install
    ```
    Wait until it finishes. You should see no red “ERR!” lines at the end.
-2. **Connect OpenAI (the step writers often pause on)**  
-   If **“API key”** sounds like nonsense, you are in good company. Before you paste anything, read [**“API key” in human words**](#api-key-in-human-words) **(the section right below Quick start)**. It is short: what that code is, that your books are not uploaded to us, rough cost, and where to click on OpenAI’s site.  
-   When you are ready, create a key at [OpenAI API keys](https://platform.openai.com/api-keys), then wire it into this project:
-   - **Windows (Command Prompt):** `copy .env.example .env`
-   - **Windows (PowerShell):** `Copy-Item .env.example .env`
-   - **macOS / Linux:** `cp .env.example .env`  
-   Then open `.env` in Notepad, TextEdit, or your editor and set `OPENAI_API_KEY` to your key (no quotes).
-3. **Manuscripts**: Put your book `.docx` files in `data/books/`, *or* point the app elsewhere (see [Where your books live](#where-your-books-live) below).
-4. **Run the app**: `npm run dev`, then open the URL the terminal prints (often [http://localhost:5173](http://localhost:5173)).
-5. **First draft**: In the **Load your books, then generate a post** section: **Scan my Word books (.docx)** → **Connect sources to the writer** → describe the post in the topic box → **Write draft post** (or **Do all steps automatically (slow)**). Your draft appears in **Your post draft** on the left and is saved under `data/output/` as `post-*.txt`.
+2. **Run Draftloom**: `npm run dev`, then open the URL the terminal prints (often [http://localhost:5173](http://localhost:5173)).
+3. **Connect OpenAI once**: Create a key at [OpenAI API keys](https://platform.openai.com/api-keys), paste it into the **Connect your OpenAI key** card, and click **Connect**. Draftloom stores it only in the local app folder.
+4. **Add manuscripts**: Click **Choose .docx files** in Draftloom and select up to 10 Word documents at a time. You can also keep using a configured manuscript folder; see [Where your books live](#where-your-books-live).
+5. **Create your first draft**: Describe the theme, scene, angle, or question in **Your creative brief**, then click **Prepare library & create draft**. Draftloom handles the scan and preparation automatically, opens the result in the editor, and saves it under `data/output/` as `post-*.txt`.
 
 That is the whole happy path. The next section, **“API key” in human words**, is there if you want a calmer explanation of step 2 (or if you skipped ahead). After that, **What you get** summarizes features, then the rest covers options, the command line, and troubleshooting.
 
@@ -109,7 +105,7 @@ That is the whole happy path. The next section, **“API key” in human words**
 
 ## <span id="api-key-in-human-words">“API key” in human words 🔑</span>
 
-An **API key** is like a **password that only lets the AI bill *your* account** when *you* click “write draft.” You create it on the provider’s site and paste it into the **`.env`** file in this project (that is **Quick start**, step 2, above).
+An **API key** is like a **password that only lets the AI bill *your* account** when *you* click “create draft.” You create it on the provider’s site and paste it into Draftloom’s connection card. Draftloom saves it to the local **`.env`** file for you.
 
 **Reading order:** You can do **Quick start** first and treat this section as the “why and where” appendix, or read this section before step 2 if you like to understand the pieces before you click anything.
 
@@ -123,10 +119,10 @@ An **API key** is like a **password that only lets the AI bill *your* account** 
 
 ### <span id="cloud-vs-open-local">Cloud vs “open” / local setups</span>
 
-- **Paid cloud APIs** (OpenAI, Anthropic, etc.): you register, add a payment method if required, create a key, paste it into `.env`. No key is stored by us; it never leaves your machine except when the app calls the provider.
+- **Paid cloud APIs** (OpenAI, Anthropic, etc.): you register, add a payment method if required, create a key, and connect it in Draftloom. No key is stored by us; it stays on your machine and is used only when the app calls the provider.
 - **Open-source / self-hosted direction:** tools like **[Ollama](https://ollama.com/)** or **[LM Studio](https://lmstudio.ai/)** let you run models **on your own computer** with **no per-token bill** to a big vendor (your hardware does the work). This repo does **not** ship a one-click Ollama mode yet; hooking it up means developer work (same bucket as “use Claude instead”: small codebase, but you or Cursor / Claude Code would adapt the API calls).
 
-**This version of the app is set up for OpenAI first** (create an account, add billing if prompted, copy a key into `.env`; **Quick start** step 2 walks through the file part).
+**This version of the app is set up for OpenAI first** (create an account, add billing if prompted, and paste a key into the connection card; **Quick start** walks through it).
 
 **Prefer Claude, OpenRouter, or a local model?** The project is open source; if you use **Cursor**, **Claude Code**, or a developer friend, swapping or adding another backend is doable. It’s **not** a one-click switch today, but you’re not locked into a black box.
 
@@ -152,7 +148,7 @@ An **API key** is like a **password that only lets the AI bill *your* account** 
 
 ## <span id="setup-details">Setup details</span>
 
-The npm package name is **`book-post-writer`**. If your folder name differs, you can rename the folder when nothing has it open (close the editor first).
+The npm package name is **`draftloom`**. If your folder name differs, you can rename the folder when nothing has it open (close the editor first).
 
 **Optional config file**: For models, paths, and draft tuning, copy the example and edit:
 
@@ -186,10 +182,10 @@ The UI status line shows which path the API is actually using.
 
 ## <span id="walkthrough-from-docx-to-post">Walkthrough: from `.docx` to a post</span>
 
-1. **Book folder**: Use `data/books/`, or set `paths.books` / `PIPELINE_BOOKS` as above. The browser does **not** upload files; the local API reads `.docx` from disk.
-2. **Voice (optional)**: Add `.docx` or plain `.txt` samples of *your* writing under `data/voice/`. See `data/voice/README.txt`. After adding files, run **Scan my writing samples** (or **Scan everything (slow)**) and **Connect sources to the writer** again.
+1. **Book folder**: Use Draftloom’s **Choose .docx files** control, or place files in `data/books/` / set `paths.books` or `PIPELINE_BOOKS`. The browser copies selected files into the app’s local manuscript folder; it does **not** upload them to a Draftloom cloud service.
+2. **Voice (optional)**: Use **Add voice samples** for `.docx` or plain `.txt` examples of your published writing. Draftloom copies them into the local voice folder and refreshes them on the next draft.
 3. **Topic box**: Treat it like a **creative brief**: what to explore, which angles matter, questions you want answered. You do **not** type the final headline there; the model generates title and subtitle with the essay.
-4. **UI flow**: Scan books and/or voice → **Connect sources to the writer** → **Write draft post** or **Do all steps automatically (slow)**. After a browser refresh, use **Open last saved draft from disk** if needed. Use **Get writing suggestions** and **Suggestions & edits** on the right to refine wording.
+4. **UI flow**: Add books → write a creative brief → **Prepare library & create draft**. Later drafts use **Create draft** once the library is current. Use **Open latest draft**, **Review my draft**, and the individual edit checkboxes to refine wording. Working text is recovered after a refresh; **Save draft** writes the finished copy to disk.
 5. **CLI alternative**: Same pipeline from the terminal:
 
    ```bash
@@ -249,7 +245,7 @@ npx tsx cli/full.ts --prompt "Same kind of topic ideas as for draft"
 
 ### <span id="browser-ui-notes">Browser UI notes</span>
 
-Open the Vite URL (often [http://localhost:5173](http://localhost:5173)). **Your post draft** (left) is plain text, the same content as `post-*.txt`. **Get writing suggestions**, **Apply checked changes to draft**, and **Rewrite whole draft with AI** work on that text. The API reads `OPENAI_API_KEY` and `pipeline.config.json` from the **repo root**. Draft and full pipeline requests need a topic field (`customTopicPrompt` in the API). The UI wires this for you.
+Open the Vite URL (often [http://localhost:5173](http://localhost:5173)). The **Draft** editor is plain text, matching the saved `post-*.txt`. **Review my draft**, **Apply selected edits**, and **Rewrite full draft** work on that text. Use **Undo** if an AI edit is not right, then copy, download, or save the result. Draftloom reads `OPENAI_API_KEY` and `pipeline.config.json` from the **repo root**; its connection card can create or update the key entry for you.
 
 ---
 
@@ -258,9 +254,9 @@ Open the Vite URL (often [http://localhost:5173](http://localhost:5173)). **Your
 | Symptom | Things to check |
 | ------- | ---------------- |
 | **`node` or `npm` is not recognized** | Node is missing or the terminal was opened before you installed it. Follow [Install Node.js and open a terminal](#install-nodejs-and-terminal), then open a **new** PowerShell / Terminal window. |
-| **`npm install` fails or says no `package.json`** | You are not inside the Book Post Writer folder. `cd` there first (see [Get “into” the Book Post Writer folder](#install-nodejs-and-terminal)). |
-| Errors about API key | `OPENAI_API_KEY` is set in `.env` at the repo root; restart `npm run dev` after changes. Confirm the key at [OpenAI API keys](https://platform.openai.com/api-keys). |
-| Empty or useless drafts | At least one `.docx` in your books folder; scan sources then **Connect sources to the writer** before **Write draft post**. |
+| **`npm install` fails or says no `package.json`** | You are not inside the Draftloom folder. `cd` there first (see [Get “into” the Draftloom folder](#install-nodejs-and-terminal)). |
+| Errors about API key | Reconnect the key in Draftloom, or confirm `OPENAI_API_KEY` in `.env` at the repo root. Confirm the key at [OpenAI API keys](https://platform.openai.com/api-keys). |
+| Empty or useless drafts | Add at least one `.docx`, give the creative brief concrete themes/scenes/questions, and use **Prepare library & create draft** so the source library is refreshed first. |
 | CLI exits non-zero | Usually missing key, missing book files, or missing embeddings before `draft` / `full`. Messages are short on purpose. Read the last line. |
 | Voice folder empty | Ingest does **not** fail if `data/voice/` is empty; voice is optional. |
 | Port already in use | Another app may be on 5173 or 8787; stop it or adjust Vite / server config if you have customized ports. |

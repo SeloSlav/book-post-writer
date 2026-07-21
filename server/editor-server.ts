@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { loadConfig } from "../pipeline/config.js";
+import fs from "node:fs/promises";
+import path from "node:path";
+import { loadConfig, repoRoot } from "../pipeline/config.js";
 import {
   clearPipelineLog,
   logPipeline,
@@ -27,6 +29,7 @@ import {
 } from "../pipeline/style-audit.js";
 
 const PORT = Number(process.env.EDITOR_API_PORT ?? 8787);
+const MAX_JSON_BYTES = 30 * 1024 * 1024;
 
 /** Path only: strip query, fragment, trailing slash, and tolerate absolute req.url from some proxies. */
 function apiPath(req: IncomingMessage): string {
@@ -55,7 +58,15 @@ function cors(res: ServerResponse): void {
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
-  for await (const chunk of req) chunks.push(chunk as Buffer);
+  let total = 0;
+  for await (const chunk of req) {
+    const buffer = chunk as Buffer;
+    total += buffer.length;
+    if (total > MAX_JSON_BYTES) {
+      throw new Error("That upload is too large. Add files in smaller groups (30 MB maximum).");
+    }
+    chunks.push(buffer);
+  }
   const raw = Buffer.concat(chunks).toString("utf8");
   if (!raw.trim()) return {};
   try {
@@ -92,7 +103,35 @@ const server = createServer(async (req, res) => {
 
     if (req.method === "GET" && url === "/api/health") {
       const cfg = loadConfig();
-      sendJson(res, 200, { ok: true, chatModel: cfg.models.chat });
+      sendJson(res, 200, {
+        ok: true,
+        chatModel: cfg.models.chat,
+        apiKeyConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+      });
+      return;
+    }
+
+    if (req.method === "POST" && url === "/api/settings/api-key") {
+      const body = (await readJsonBody(req)) as { apiKey?: string };
+      const apiKey = typeof body.apiKey === "string" ? body.apiKey.trim() : "";
+      if (apiKey.length < 20 || !apiKey.startsWith("sk-")) {
+        sendJson(res, 400, { error: "Enter a valid OpenAI API key beginning with sk-." });
+        return;
+      }
+      const envPath = path.join(repoRoot(), ".env");
+      let existing = "";
+      try {
+        existing = await fs.readFile(envPath, "utf8");
+      } catch {
+        existing = "";
+      }
+      const nextLine = `OPENAI_API_KEY=${apiKey}`;
+      const next = /^OPENAI_API_KEY=.*$/m.test(existing)
+        ? existing.replace(/^OPENAI_API_KEY=.*$/m, nextLine)
+        : `${existing.trimEnd()}${existing.trim() ? "\n" : ""}${nextLine}\n`;
+      await fs.writeFile(envPath, next, "utf8");
+      process.env.OPENAI_API_KEY = apiKey;
+      sendJson(res, 200, { ok: true });
       return;
     }
 
@@ -119,12 +158,57 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && url === "/api/pipeline/upload-sources") {
+      const body = (await readJsonBody(req)) as {
+        kind?: "book" | "voice";
+        files?: Array<{ name?: string; dataBase64?: string }>;
+      };
+      const kind = body.kind;
+      const files = Array.isArray(body.files) ? body.files : [];
+      if (kind !== "book" && kind !== "voice") {
+        sendJson(res, 400, { error: "Choose manuscript or voice-sample files." });
+        return;
+      }
+      if (files.length === 0 || files.length > 10) {
+        sendJson(res, 400, { error: "Add between 1 and 10 files at a time." });
+        return;
+      }
+      const cfg = loadConfig();
+      const targetDir = kind === "book" ? cfg.paths.books : cfg.paths.voice;
+      const allowed = kind === "book" ? new Set([".docx"]) : new Set([".docx", ".txt"]);
+      await fs.mkdir(targetDir, { recursive: true });
+      const saved: string[] = [];
+      for (const item of files) {
+        const safeName = path.basename(String(item.name ?? ""));
+        const extension = path.extname(safeName).toLowerCase();
+        if (!safeName || !allowed.has(extension) || typeof item.dataBase64 !== "string") {
+          sendJson(res, 400, {
+            error:
+              kind === "book"
+                ? "Manuscripts must be Word .docx files."
+                : "Voice samples must be .docx or .txt files.",
+          });
+          return;
+        }
+        const data = Buffer.from(item.dataBase64, "base64");
+        if (data.length === 0 || data.length > 15 * 1024 * 1024) {
+          sendJson(res, 400, { error: `${safeName} must be smaller than 15 MB.` });
+          return;
+        }
+        await fs.writeFile(path.join(targetDir, safeName), data);
+        saved.push(safeName);
+      }
+      sendJson(res, 200, { ok: true, saved });
+      return;
+    }
+
     if (req.method === "POST" && url === "/api/pipeline/save-draft") {
       clearPipelineLog();
       logPipeline(`HTTP POST /api/pipeline/save-draft — write Post pane to output folder`);
       const body = (await readJsonBody(req)) as {
         text?: string;
         strategy?: "prefer-latest" | "always-new";
+        targetPath?: string | null;
       };
       const postText = postBodyText(body);
       if (typeof postText !== "string") {
@@ -134,7 +218,11 @@ const server = createServer(async (req, res) => {
       const strategy =
         body.strategy === "always-new" ? "always-new" : "prefer-latest";
       try {
-        const r = await saveEditorDraft({ text: postText, strategy });
+        const r = await saveEditorDraft({
+          text: postText,
+          strategy,
+          targetPath: typeof body.targetPath === "string" ? body.targetPath : null,
+        });
         logPipeline(`HTTP: save-draft finished (${r.kind}).`);
         sendJson(res, 200, {
           ok: true,

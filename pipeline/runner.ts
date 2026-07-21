@@ -301,14 +301,54 @@ export async function pipelineDraft(params: {
 
 export type PipelineStatus = {
   booksPath: string;
+  bookFileCount: number;
+  voiceFileCount: number;
   chunkCount: number;
   embeddedCount: number;
+  sourcesNeedScan: boolean;
+  embeddingsNeedRefresh: boolean;
+  apiKeyConfigured: boolean;
+  chatModel: string;
   latestDraftPath: string | null;
   outputDir: string;
 };
 
+async function sourceFilesIn(
+  dir: string,
+  extensions: string[],
+): Promise<{ count: number; newestMtime: number }> {
+  try {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const allowed = new Set(extensions.map((ext) => ext.toLowerCase()));
+    const files = entries.filter(
+      (entry) =>
+        entry.isFile() &&
+        !entry.name.toLowerCase().startsWith("readme") &&
+        allowed.has(path.extname(entry.name).toLowerCase()),
+    );
+    const mtimes = await Promise.all(
+      files.map((entry) => fs.stat(path.join(dir, entry.name)).then((stat) => stat.mtimeMs)),
+    );
+    return { count: files.length, newestMtime: Math.max(0, ...mtimes) };
+  } catch {
+    return { count: 0, newestMtime: 0 };
+  }
+}
+
+async function modifiedAt(filePath: string): Promise<number> {
+  try {
+    return (await fs.stat(filePath)).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
 export async function getPipelineStatus(): Promise<PipelineStatus> {
   const cfg = loadConfig();
+  const [books, voice] = await Promise.all([
+    sourceFilesIn(cfg.paths.books, [".docx"]),
+    sourceFilesIn(cfg.paths.voice, [".docx", ".txt"]),
+  ]);
   let chunkCount = 0;
   let embeddedCount = 0;
   try {
@@ -345,10 +385,26 @@ export async function getPipelineStatus(): Promise<PipelineStatus> {
   } catch {
     latestDraftPath = null;
   }
+  const chunksModifiedAt = await modifiedAt(path.join(cfg.paths.indexDir, "chunks.json"));
+  const embeddingsModifiedAt = await modifiedAt(
+    path.join(cfg.paths.indexDir, "embeddings.json"),
+  );
+  const newestSource = Math.max(books.newestMtime, voice.newestMtime);
+  const sourcesNeedScan =
+    books.count > 0 && (chunkCount === 0 || newestSource > chunksModifiedAt);
+  const embeddingsNeedRefresh =
+    chunkCount > 0 &&
+    (embeddedCount < chunkCount || embeddingsModifiedAt < chunksModifiedAt);
   return {
     booksPath: cfg.paths.books,
+    bookFileCount: books.count,
+    voiceFileCount: voice.count,
     chunkCount,
     embeddedCount,
+    sourcesNeedScan,
+    embeddingsNeedRefresh,
+    apiKeyConfigured: Boolean(process.env.OPENAI_API_KEY?.trim()),
+    chatModel: cfg.models.chat,
     latestDraftPath,
     outputDir: cfg.paths.output,
   };
@@ -372,19 +428,28 @@ export type SaveDraftStrategy = "prefer-latest" | "always-new";
 export async function saveEditorDraft(params: {
   text: string;
   strategy: SaveDraftStrategy;
+  targetPath?: string | null;
 }): Promise<{ path: string; kind: "overwrote" | "created" }> {
   const cfg = loadConfig();
   const dir = cfg.paths.output;
   await fs.mkdir(dir, { recursive: true });
   const normalized = params.text.replace(/\r\n/g, "\n");
 
-  if (params.strategy === "prefer-latest") {
-    const status = await getPipelineStatus();
-    if (status.latestDraftPath) {
-      await fs.writeFile(status.latestDraftPath, normalized, "utf8");
-      logPipeline(`Save draft: overwrote ${status.latestDraftPath}`);
-      return { path: status.latestDraftPath, kind: "overwrote" };
+  if (params.strategy === "prefer-latest" && params.targetPath) {
+    const resolvedDir = path.resolve(dir);
+    const resolvedTarget = path.resolve(params.targetPath);
+    const relative = path.relative(resolvedDir, resolvedTarget);
+    const isInsideOutput =
+      relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative);
+    const allowedExtension = [".txt", ".md"].includes(
+      path.extname(resolvedTarget).toLowerCase(),
+    );
+    if (!isInsideOutput || !allowedExtension) {
+      throw new Error("That draft is outside this app’s saved-drafts folder.");
     }
+    await fs.writeFile(resolvedTarget, normalized, "utf8");
+    logPipeline(`Save draft: overwrote ${resolvedTarget}`);
+    return { path: resolvedTarget, kind: "overwrote" };
   }
 
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
